@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITS-90</title>
+
+    <style>
+        table,
+        td,
+        th {
+            border: 1px solid #BBB;
+        }
+
+        table {
+            width: 100%;
+            max-width: 800px;
+            border-collapse: collapse;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .table-value tr td:nth-child(2) {
+            text-align: right;
+            padding-right: 1rem;
+        }
+
+        form {
+            width: 100%;
+            max-width: 800px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            row-gap: 2px;
+        }
+
+        input[type="number"] {
+            text-align: right;
+        }
+
+        th, td {
+            padding: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>ITS-90 Converter</h1>
+
+    <h2>Constant from Calibration sheet</h2>
+    <form>
+        <label for="r_tpw">R TPW (ohm)</label>
+        <input id="r_tpw" type="number" value="25.39351" title="Resistance at triple point water">
+        <label for="coef_a">Deviation Coefficient a</label>
+        <input id="coef_a" type="number" value="-0.000049858" title="Deviation Coefficient a from calibration sheet">
+        <label for="coef_b">Deviation Coefficient b</label>
+        <input id="coef_b" type="number" value="-0.000118305" title="Deviation Coefficient b from calibration sheet">
+    </form>
+
+    <h2>Measured R or W as input</h2>
+    <form>
+        <label for="R">R (ohm)</label>
+        <input id="R" type="number" value="25.39351" onchange="onChangeR()" step="0.00001" title="Resistance you measured">
+        <label for="W">W (resistance ratio)</label>
+        <input id="W" type="number" value="1" onchange="onChangeW()" step="0.00000001" title="R / R TPW = Resistance ratio">
+    </form>
+
+    <h2>Result</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>item</th>
+                <th style="width: 50%">value</th>
+                <th>description</th>
+            </tr>
+        </thead>
+        <tbody class="table-value">
+            <tr>
+                <th>R tpw</th>
+                <td id="txtr_tpw"></td>
+                <td>ohm</td>
+            </tr>
+
+            <tr>
+                <th>coef a</th>
+                <td id="txtcoef_a"></td>
+                <td>coefficient</td>
+            </tr>
+
+            <tr>
+                <th>coef b</th>
+                <td id="txtcoef_b"></td>
+                <td>coefficient</td>
+            </tr>
+
+            <tr>
+                <th>W</th>
+                <td id="txtW"></td>
+                <td>resistance ratio</td>
+            </tr>
+
+            <tr>
+                <th>&Delta; W</th>
+                <td id="txtdeltaW"></td>
+                <td>deviation from a b</td>
+            </tr>
+
+            <tr>
+                <th>Wr</th>
+                <td id="txtWr"></td>
+                <td>result from reference function</td>
+            </tr>
+
+            <tr>
+                <th>t</th>
+                <td id="txtt"></td>
+                <td>&deg;C</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Links</h2>
+    <ul>
+        <li>
+            <a href="https://www.bipm.org/documents/20126/41773843/Guide_ITS-90_5_SPRT_2021.pdf/c4bbbe56-4118-eef7-47cb-3ea234db40b8">Guide to the Realization of the ITS-90</a>
+        </li>
+        <li>
+            <a href="https://observablehq.com/@heosd/its90">Equation details</a>
+        </li>
+    </ul>
+
+    <script src="./its90.js"></script>
+    <script>
+
+        function getr_tpw() {
+            return parseFloat(document.getElementById('r_tpw').value);
+        }
+
+        function getcoef_a() {
+            return parseFloat(document.getElementById('coef_a').value);
+        }
+
+        function getcoef_b() {
+            return parseFloat(document.getElementById('coef_b').value);
+        }
+
+        function getR() {
+            return parseFloat(document.getElementById('R').value);
+        }
+
+        function getW() {
+            return parseFloat(document.getElementById('W').value);
+        }
+
+        function onChangeR() {
+            const r_tpw = getr_tpw();
+            const R = getR();
+
+            if (isNaN(r_tpw) || isNaN(R)) {
+                alert("Invalid input, R TPW and R should be number");
+                return;
+            }
+
+            const W = ITS90.Calcw(r_tpw, R)
+            document.getElementById('W').value = W;
+
+            execW();
+        }
+
+        function onChangeW() {
+            const r_tpw = getr_tpw();
+            const W = getW();
+
+            if (isNaN(r_tpw) || isNaN(W)) {
+                alert("Invalid input, R TPW and W should be number");
+                return;
+            }
+
+            const R = ITS90.Calcr(r_tpw, W);
+            document.getElementById('R').value = R;
+
+            execW();
+        }
+
+        function execW() {
+            const r_tpw = getr_tpw();
+            const W = getW();
+            const a = getcoef_a();
+            const b = getcoef_b();
+
+            if (isNaN(r_tpw) || isNaN(W) || isNaN(a) || isNaN(b)) {
+                alert("Invalid input, R TPW, W, coef a, coef b should be number");
+                return;
+            }
+
+            const result = ITS90.RefFunction(W, a, b);
+            console.log(result);
+
+            document.getElementById('txtr_tpw').textContent = r_tpw;
+            document.getElementById('txtcoef_a').textContent = a;
+            document.getElementById('txtcoef_b').textContent = b;
+
+            document.getElementById('txtW').textContent = W;
+            document.getElementById('txtdeltaW').textContent = result.deltaW;
+            document.getElementById('txtWr').textContent = result.Wr;
+            document.getElementById('txtt').textContent = result.t_c.toFixed(4);
+        }
+
+        // Entry point
+        execW();
+
+    </script>
+
+</body>
+
+</html>
